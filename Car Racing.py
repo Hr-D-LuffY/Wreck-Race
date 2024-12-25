@@ -123,7 +123,7 @@ missile_last_time = []
 last_recharge_time = 0
 
 hearts = []  
-last_spawn_time = 0
+heart_spawn_time = 0
 
 game_started = False  
 paused = False
@@ -136,8 +136,9 @@ enemy_car_speed = 4  # Speed of the enemy cars
 spawn_interval = 5  # Time interval between spawning new sets of cars
 last_spawn_time = 0  # Tracks the last spawn time
 
-car_speed = 25  # Initialize car speed
+car_speed = 50  # Initialize car speed
 key_pressed = None  # Track the currently pressed key
+game_over=False
 
 def road():
     # Draw white lane markers
@@ -155,7 +156,7 @@ def road():
 
     #setting up the top
     MidpointLine(0,625,WINDOW_WIDTH,625)
-
+player_y_position = 100
 def my_car():
     global car_position
     # Car body
@@ -233,6 +234,9 @@ def my_car():
     MidpointLine(car_position-25, 88, car_position-25, 73)
     MidpointLine(car_position+25, 25, car_position+25, 40) 
     MidpointLine(car_position-25, 25, car_position-25, 40)
+
+    car_box = AABB(x = car_position, y = player_y_position, width = 50, height = 90)
+    return car_box
 
 #Missile Section
 def missile():
@@ -324,18 +328,24 @@ class EnemyCar:
 
     def update_position(self):
         self.y -= self.speed 
+        global score
+        if self.y<0:
+            score+=1
 
     def out_of_boundary(self):
         return self.y < 0  
 
     def draw(self):
-        y=self.y+ 20 if  self.is_special else self.y
-        x=self.x+ 20 if  self.is_special else self.x
+        y=self.y
+        x=self.x
         glColor3f(*self.color) if  self.is_special else glColor3f(1.0, 0.0, 0.0)
          #body
         glPointSize(1.5)
         for yy in range(y-40, y+40):
-            MidpointLine(x-24, yy, x+24, yy)
+            if self.is_special:
+                MidpointLine(x-29, yy, x+29, yy)
+            else:
+                MidpointLine(x-24, yy, x+24, yy)
 
         # Front glass (filled rectangle)
         # glColor3f(1,1,1) if self.is_special else glColor3f(0,0,0)
@@ -361,29 +371,72 @@ class EnemyCar:
 
         #whell
         glPointSize(3)
-        glColor3f(0.5, 0.5, 0.5)
-        MidpointLine(x-25,y+35,x-25,y+21)
-        MidpointLine(x-25,y-31,x-25,y-17)
-        MidpointLine(x+25,y+35,x+25,y+21)
-        MidpointLine(x+25,y-31,x+25,y-17)
+        if self.is_special:
+            glColor3f(0.5, 0.5, 1)
+            MidpointLine(x-30,y+35,x-30,y+21)
+            MidpointLine(x-30,y-31,x-30,y-17)
+            MidpointLine(x+30,y+35,x+30,y+21)
+            MidpointLine(x+30,y-31,x+30,y-17)
+        else:
+            glColor3f(0.5, 0.5, 0.5)
+            MidpointLine(x-25,y+35,x-25,y+21)
+            MidpointLine(x-25,y-31,x-25,y-17)
+            MidpointLine(x+25,y+35,x+25,y+21)
+            MidpointLine(x+25,y-31,x+25,y-17)
 
+    def get_edges(self):
+        # Calculate the edges of the bounding box
+        xmin = self.x - self.width // 2
+        xmax = self.x + self.width // 2
+        ymin = self.y - self.height // 2
+        ymax = self.y + self.height // 2
+        return xmin, xmax, ymin, ymax
+
+
+# def spawn_enemy_cars():
+#     global enemy_cars, last_spawn_time
+
+#     current_time = time.time()
+#     if (current_time - last_spawn_time) >= spawn_interval:
+#         lanes = [175, 275, 375, 475]  # Centers of the lanes
+#         for _ in range(4):  # Spawn 4 cars
+#             x = random.choice(lanes)  # Choose a random lane
+#             y = 600  # Start at the top of the screen
+#             while True:
+#                 color = (random.random(), random.random(), random.random())
+#                 if color != (1, 0, 0) and color != (0, 0, 0):
+#                     break
+#             is_special = random.random() < 0.15
+#             enemy_cars.append(EnemyCar(x, y,color, enemy_car_speed, is_special))  # Add to the list of cars
+#         last_spawn_time = current_time  # Update last spawn time
+
+MAX_ENEMY_CARS = 5
 def spawn_enemy_cars():
-    global enemy_cars, last_spawn_time
+    global enemy_cars, last_spawn_time, spawn_interval
 
     current_time = time.time()
+
+    # Control spawn interval to control how often enemy cars spawn
     if (current_time - last_spawn_time) >= spawn_interval:
         lanes = [175, 275, 375, 475]  # Centers of the lanes
-        for _ in range(4):  # Spawn 4 cars
-            x = random.choice(lanes)  # Choose a random lane
-            y = 600  # Start at the top of the screen
-            while True:
-                color = (random.random(), random.random(), random.random())
-                if color != (1, 0, 0) and color != (0, 0, 0):
-                    break
-            is_special = random.random() < 0.15
-            enemy_cars.append(EnemyCar(x, y,color, enemy_car_speed, is_special))  # Add to the list of cars
-            print(enemy_cars[_].is_special)
-        last_spawn_time = current_time  # Update last spawn time
+
+        # Limit the number of enemy cars in the game
+        if len(enemy_cars) < MAX_ENEMY_CARS:
+            # Reduce the number of cars spawned each time
+            num_cars_to_spawn = random.randint(1,2)  # Spawn between 1 to 2 cars per call
+            for _ in range(num_cars_to_spawn):  
+                x = random.choice(lanes)  # Choose a random lane
+                y = 600  # Start at the top of the screen
+                while True:
+                    color = (random.random(), random.random(), random.random())
+                    if color != (1, 0, 0) and color != (0, 0, 0):  # Avoid specific colors (e.g., red or black)
+                        break
+                is_special = random.random() < 0.15  # Special car chance
+                enemy_cars.append(EnemyCar(x, y, color, enemy_car_speed, is_special))  # Add to the list of cars
+
+        # Update the last spawn time to control the spawn interval
+        last_spawn_time = current_time
+
 
 def update_enemy_cars():
     global enemy_cars
@@ -397,27 +450,37 @@ def draw_enemy_cars():
     for car in enemy_cars:
         car.draw() 
 
+def render_gameplay():
+    """Render all gameplay elements."""
+    # Spawn, update, and draw enemy cars
+    spawn_enemy_cars()  # Spawn new cars every 3 seconds
+    update_enemy_cars()  # Update positions of cars
+    draw_enemy_cars()  # Draw all active cars
+
+    buttons()
+    update_hearts()
+    for heart in hearts:
+        heart.draw()  # Draw all hearts
+    score_card()
+    road()
+    my_car()
+    update_missiles()
+    missile()
+
 def display():
-    global score, life, no_missile,game_started,last_spawn_time
+    global score, life, no_missile,game_started,last_spawn_time,game_over
     glClear(GL_COLOR_BUFFER_BIT)
     if not game_started:
         draw_menu()
     else:
-        # Spawn, update, and draw enemy cars
-        spawn_enemy_cars()  # Spawn new cars every 3 seconds
-        update_enemy_cars()  # Update positions of cars
-        draw_enemy_cars()  # Draw all active cars
-
-        buttons()
-        update_hearts()  
-        # Draw all hearts
-        for heart in hearts:
-            heart.draw()
-        score_card()
-        road()
-        my_car()
-        update_missiles()
-        missile()
+        if game_over:
+            render_stroke_text(330, 330, f"GAME OVER", 0.13, (1, 0, 0), 1.5)
+            render_stroke_text(330, 350, f"Score : {score}", 0.13, (1, 0, 0), 1.5)
+            glutSwapBuffers() 
+            time.sleep(3)
+            game_started=False
+        else:
+            render_gameplay()
     glFlush()
 
 #Heart / Life Section
@@ -456,12 +519,12 @@ def spawn_heart():
     hearts.append(Heart(x, y))
 
 def update_hearts():
-    global last_spawn_time
+    global heart_spawn_time
     # Check if 12 seconds have passed since the last spawn
     current_time = time.time()
-    if current_time - last_spawn_time > 12:
+    if current_time - heart_spawn_time > 12:
         spawn_heart()
-        last_spawn_time = current_time
+        heart_spawn_time = current_time
 
     # Update hearts and remove those that are no longer visible
     hearts[:] = [heart for heart in hearts if heart.update()]
@@ -500,6 +563,7 @@ def update(value):
         last_time = current_time
 
     missiles_movement(d_time)
+    check_collisions(my_car, enemy_cars)
     glutPostRedisplay()
     glutTimerFunc(16, update, 0)
 
@@ -514,6 +578,54 @@ def render_stroke_text(x, y, text, scale, color=(1, 1, 1), line_width=1):
         glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(char))    
     glPopMatrix()
 
+class AABB:
+    def __init__(self, x, y, width, height):
+        # Initialize the AABB with the center (x, y), width, and height
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    # Method to get the AABB's left, right, top, and bottom edges
+    def get_edges(self):
+        xmin = self.x - self.width / 2
+        xmax = self.x + self.width / 2
+        ymin = self.y - self.height / 2
+        ymax = self.y + self.height / 2
+        return xmin, xmax, ymin, ymax
+
+# Updated Collision Detection for AABB
+def hasCollided(player_car, enemy_car):
+    # Get the edges of the player and enemy car bounding boxes
+    player_xmin, player_xmax, player_ymin, player_ymax = player_car.get_edges()
+    enemy_xmin, enemy_xmax, enemy_ymin, enemy_ymax = enemy_car.get_edges()
+
+    # Check if the bounding boxes of the player and enemy cars overlap
+    if (player_xmin < enemy_xmax and
+        player_xmax > enemy_xmin and
+        player_ymin < enemy_ymax and
+        player_ymax > enemy_ymin):
+        return True
+
+    return False
+
+# Function to check for collisions with the player's car
+def check_collisions(player_car, enemy_cars):
+    global life,game_over
+    player_car = my_car()
+    for enemy in enemy_cars:
+        # Check for collision between the player's car and each enemy car
+        if hasCollided(player_car, enemy):
+            print("Collision Detected!")
+            print("Player car edges:", player_car.get_edges())
+            print("Enemy car edges:", enemy.get_edges())
+            life-=1
+            if life == 0:
+                game_over= True
+            # Implement what happens when a collision is detected (e.g., game over, damage, etc.)
+            # For now, let's just remove the enemy car upon collision
+            enemy_cars.remove(enemy)
+            break
 
 def keyboard(key, x, y):
     global car_position, car_speed, key_pressed,game_started,missiles,no_missile,missile_last_time
