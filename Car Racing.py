@@ -156,6 +156,8 @@ def road():
 
     #setting up the top
     MidpointLine(0,625,WINDOW_WIDTH,625)
+
+
 player_y_position = 100
 def my_car():
     global car_position
@@ -235,7 +237,7 @@ def my_car():
     MidpointLine(car_position+25, 25, car_position+25, 40) 
     MidpointLine(car_position-25, 25, car_position-25, 40)
 
-    car_box = AABB(x = car_position, y = player_y_position, width = 50, height = 90)
+    car_box = AABB(x = car_position, y = player_y_position, width = 30, height = 15)
     return car_box
 
 #Missile Section
@@ -251,12 +253,32 @@ def missile():
        MidpointLine(x,y,x-3,y-5)
        MidpointLine(x+5,y,x+8,y-5)
         
+def missile_hitbox(x, y):
+    return AABB(
+        x=x,  # Missile's x position
+        y=y,  # Missile's y position
+        width=5,  # Width of the missile
+        height=10 # Height of the missile
+    )
+
+
 def missiles_movement(d_time):
+    """
+    Update missile positions and handle out-of-screen missiles.
+    """
     global missiles
+    missile_speed = 50
+
     for p in missiles[:]:
-        p[1] += int(300 * d_time)
-        if p[1] > 620:  # Remove missiles that are off-screen
+        p[1] += int(missile_speed * d_time)
+
+        # Compute hitbox for the missile
+        missile_box = missile_hitbox(p[0], p[1])
+
+        # Remove missiles that are off-screen
+        if p[1] > 620:
             missiles.remove(p)
+
     glutPostRedisplay()
 
 def can_shoot_missile():
@@ -327,7 +349,7 @@ class EnemyCar:
         self.width=48
 
     def update_position(self):
-        self.y -= self.speed 
+        self.y -=  5
         global score
         if self.y<0:
             score+=1
@@ -384,14 +406,14 @@ class EnemyCar:
             MidpointLine(x+25,y+35,x+25,y+21)
             MidpointLine(x+25,y-31,x+25,y-17)
 
-    def get_edges(self):
-        # Calculate the edges of the bounding box
-        xmin = self.x - self.width // 2
-        xmax = self.x + self.width // 2
-        ymin = self.y - self.height // 2
-        ymax = self.y + self.height // 2
-        return xmin, xmax, ymin, ymax
-
+    def get_hitbox(self):
+        # Create a hitbox using the car's position and dimensions
+        return AABB(
+            x = self.x - self.width // 2,  # Left edge
+            y = self.y - self.height // 2,  # Bottom edge
+            width = 48,
+            height = 18
+        )
 
 # def spawn_enemy_cars():
 #     global enemy_cars, last_spawn_time
@@ -418,7 +440,7 @@ def spawn_enemy_cars():
 
     # Control spawn interval to control how often enemy cars spawn
     if (current_time - last_spawn_time) >= spawn_interval:
-        lanes = [175, 275, 375, 475]  # Centers of the lanes
+        lanes = [175, 275, 375, 475, 575]  # Centers of the lanes
 
         # Limit the number of enemy cars in the game
         if len(enemy_cars) < MAX_ENEMY_CARS:
@@ -484,24 +506,29 @@ def display():
     glFlush()
 
 #Heart / Life Section
+lanes = [175, 275, 375, 475, 575]  # Predefined lane centers
+
 class Heart:
-    def __init__(self, x, y):
-        self.x = x
+    def __init__(self, lane_index, y):
+        self.lane_index = lane_index  # Store lane index instead of x-position
         self.y = y
         self.alpha = 1.0  # Opacity (1.0 = fully visible)
+        self.width = 10
+        self.height = 10
 
     def draw(self):
         glColor4f(1.0, 0.0, 0.0, self.alpha)  # Red color with transparency
         glPointSize(1.5)
-        MidpointLine(self.x, self.y, self.x + 10, self.y + 8)
-        MidpointLine(self.x, self.y, self.x - 10, self.y + 8)
-        MidpointLine(self.x - 20, self.y, self.x - 10, self.y + 8)
-        MidpointLine(self.x + 20, self.y, self.x + 10, self.y + 8)
-        MidpointLine(self.x - 20, self.y, self.x - 20, self.y - 13)
-        MidpointLine(self.x + 20, self.y, self.x + 20, self.y - 13)
-        MidpointLine(self.x - 20, self.y - 13, self.x, self.y - 25)
-        MidpointLine(self.x + 20, self.y - 13, self.x, self.y - 25)
-        MidpointLine(self.x, self.y, self.x, self.y - 25)
+        x = lanes[self.lane_index]  # Get x-position based on lane index
+        MidpointLine(x, self.y, x + 10, self.y + 8)
+        MidpointLine(x, self.y, x - 10, self.y + 8)
+        MidpointLine(x - 20, self.y, x - 10, self.y + 8)
+        MidpointLine(x + 20, self.y, x + 10, self.y + 8)
+        MidpointLine(x - 20, self.y, x - 20, self.y - 13)
+        MidpointLine(x + 20, self.y, x + 20, self.y - 13)
+        MidpointLine(x - 20, self.y - 13, x, self.y - 25)
+        MidpointLine(x + 20, self.y - 13, x, self.y - 25)
+        MidpointLine(x, self.y, x, self.y - 25)
 
     def update(self):
         self.y -= 8  # Move downward
@@ -512,11 +539,21 @@ class Heart:
             return False  # Remove heart when fully faded
         return True
 
+    def get_hitbox(self):
+        # Get the bounding box (AABB) of the heart based on its position and size
+        x = lanes[self.lane_index]  # x-position of the heart based on its lane
+        return AABB(
+            x=x,  # Heart's x position (centered in the lane)
+            y=self.y,  # Heart's y position
+            width=8,
+            height=70
+        )
+
 def spawn_heart():
     global hearts
-    x = random.randint(150, 600)
+    lane_index = random.randint(0, len(lanes) - 1)  # Random lane
     y = random.randint(500, 600)
-    hearts.append(Heart(x, y))
+    hearts.append(Heart(lane_index, y))
 
 def update_hearts():
     global heart_spawn_time
@@ -554,18 +591,36 @@ def buttons():
 
 # Update Function
 def update(value):
-    global last_time,car_position, car_speed, key_pressed,last_spawn_time,hearts
-    
+    global last_time, car_position, car_speed, key_pressed, last_spawn_time, hearts, missiles, enemy_cars
+    player_hitbox = my_car()  # Get player's car hitbox
 
     if not paused:
         current_time = time.time()
         d_time = current_time - last_time
         last_time = current_time
 
-    missiles_movement(d_time)
-    check_collisions(my_car, enemy_cars)
+        # Update missile movement
+        missiles_movement(d_time)
+
+        # Check collisions between player and enemy cars
+        check_collisions(player_hitbox, enemy_cars)
+
+        # Check missile collisions with enemy cars
+        check_missile_collisions(missiles, enemy_cars)
+
+        # Check missile collisions with hearts (new addition)
+        check_heart_collisions(missiles, hearts)
+
+        # Update hearts and remove those that are no longer visible
+        update_hearts()
+
+    # Redraw the scene
     glutPostRedisplay()
+
+    # Continue the timer loop to call the update function every 16 ms (approximately 60 FPS)
     glutTimerFunc(16, update, 0)
+
+
 
 def render_stroke_text(x, y, text, scale, color=(1, 1, 1), line_width=1):
     glPushMatrix()
@@ -595,40 +650,77 @@ class AABB:
         return xmin, xmax, ymin, ymax
 
 # Updated Collision Detection for AABB
-def hasCollided(player_car, enemy_car):
+def hasCollided(player_hitbox, enemy_hitbox):
     # Get the edges of the player and enemy car bounding boxes
-    player_xmin, player_xmax, player_ymin, player_ymax = player_car.get_edges()
-    enemy_xmin, enemy_xmax, enemy_ymin, enemy_ymax = enemy_car.get_edges()
+    player_xmin, player_xmax, player_ymin, player_ymax = player_hitbox.get_edges()
+    enemy_xmin, enemy_xmax, enemy_ymin, enemy_ymax = enemy_hitbox.get_edges()
 
     # Check if the bounding boxes of the player and enemy cars overlap
-    if (player_xmin < enemy_xmax and
-        player_xmax > enemy_xmin and
-        player_ymin < enemy_ymax and
-        player_ymax > enemy_ymin):
-        return True
+    return (player_xmin < enemy_xmax and
+            player_xmax > enemy_xmin and
+            player_ymin < enemy_ymax and
+            player_ymax > enemy_ymin)
 
-    return False
+
 
 # Function to check for collisions with the player's car
 def check_collisions(player_car, enemy_cars):
-    global life,game_over
-    player_car = my_car()
+    global life, game_over
     for enemy in enemy_cars:
+        # Get the hitbox of the enemy car
+        enemy_hitbox = enemy.get_hitbox()
         # Check for collision between the player's car and each enemy car
-        if hasCollided(player_car, enemy):
+        if hasCollided(player_car, enemy_hitbox):
             print("Collision Detected!")
             print("Player car edges:", player_car.get_edges())
-            print("Enemy car edges:", enemy.get_edges())
-            life-=1
+            print("Enemy car edges:", enemy_hitbox.get_edges())
+            life -= 1
             if life == 0:
-                game_over= True
-            # Implement what happens when a collision is detected (e.g., game over, damage, etc.)
-            # For now, let's just remove the enemy car upon collision
+                game_over = True
+            # Remove the enemy car upon collision
             enemy_cars.remove(enemy)
-            break
+            
+
+def check_missile_collisions(missiles, enemy_cars):
+    global score
+    missiles_to_remove = []  # Temporary list to hold missiles that should be removed
+
+    for missile in missiles[:]:  # Iterate over a copy of the list
+        missile_box = missile_hitbox(missile[0], missile[1])  # Get missile's hitbox
+        
+        for enemy in enemy_cars[:]:  # Iterate over a copy of the enemy cars list
+            enemy_hitbox = enemy.get_hitbox()  # Get enemy car's hitbox
+            
+            if hasCollided(missile_box, enemy_hitbox):  # Check for collision
+                print("Missile hit an enemy car!")
+                score += 1  # Increment score
+                missiles_to_remove.append(missile)  # Mark missile for removal
+                enemy_cars.remove(enemy)  # Remove enemy car after collision
+                break  # Exit the inner loop to check next missile
+
+    # Remove all missiles that collided with enemies after the loop finishes
+    for missile in missiles_to_remove:
+        missiles.remove(missile)
+
+def check_heart_collisions(missiles, hearts):
+    global life  # We will increment the player's life here
+
+    for missile in missiles[:]:
+        missile_box = missile_hitbox(missile[0], missile[1])  # Get missile's hitbox
+        
+        for heart in hearts[:]:
+            heart_hitbox = heart.get_hitbox()  # Get heart's hitbox
+            
+            if hasCollided(missile_box, heart_hitbox):  # Check for collision
+                print("Missile hit a heart!")
+                life += 1  # Increase the player's life
+                missiles.remove(missile)  # Remove missile after collision
+                print(life)
+                hearts.remove(heart)
 
 def keyboard(key, x, y):
-    global car_position, car_speed, key_pressed,game_started,missiles,no_missile,missile_last_time
+    global car_position, car_speed, key_pressed, game_started, missiles, no_missile, missile_last_time
+
     if not game_started:
         if key == b'\r': 
             game_started = True  # Set the game state to started
@@ -637,13 +729,19 @@ def keyboard(key, x, y):
             print("Goodbye!")
             glutLeaveMainLoop() 
     else:
+        # Handle left and right movement snapping to lanes
         if key == b'a' or key == b'A':
-            car_position = max(25, car_position - car_speed)  # Move car left
+            current_lane = min(lanes, key=lambda lane: abs(lane - car_position))
+            current_index = lanes.index(current_lane)
+            if current_index > 0:  # Move left if not in the leftmost lane
+                car_position = lanes[current_index - 1]
         elif key == b'd' or key == b'D':
-            car_position = min(675, car_position + car_speed)  # Move car right
+            current_lane = min(lanes, key=lambda lane: abs(lane - car_position))
+            current_index = lanes.index(current_lane)
+            if current_index < len(lanes) - 1:  # Move right if not in the rightmost lane
+                car_position = lanes[current_index + 1]
         elif key == b' ' and can_shoot_missile():  # Only shoot if can_shoot_missile() allows
             current_time = time.time()
-
             if no_missile > 0:  # There are missiles available to shoot
                 missiles.append([car_position, 105])  # Add new missile at car position
                 missile_last_time.append(current_time)  # Store the current time of firing for this missile
