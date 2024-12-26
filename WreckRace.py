@@ -271,6 +271,8 @@ def can_shoot_missile():
     global no_missile, missile_last_time  
     if no_missile > 0:  # Check if missile counter allows shooting
         return True  # Missiles are available
+    if no_missile <= 0:  # Check if missile counter allows shooting
+        return False
 
     current_time = time.time()   # Check if any missile has completed its cooldown
     for fire_time in missile_last_time:
@@ -591,10 +593,11 @@ def draw_menu():
     glPointSize(2)
     MidpointLine(250,355,400,355)
     render_stroke_text(250, 340, "Press 'ENTER' To Start", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
-    render_stroke_text(250, 320, "Press 'a' For Left & 'd' For Right Movement", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
+    render_stroke_text(250, 320, "Press ' A ' For Left & ' D ' For Right Movement", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
     render_stroke_text(250, 300, "Attack Special White window car for +1 missle and +5 score!", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
-    render_stroke_text(250, 280, "Don't Crash With car to gain 1+ score", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
-    render_stroke_text(250, 260, "Press 'X' To Exit", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
+    render_stroke_text(250, 280, "Press 'Space' for attack missile", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
+    render_stroke_text(250, 260, "Don't Crash With car to gain 1+ score", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
+    render_stroke_text(250, 240, "Press ' X ' To Exit", 0.1, (1.0, 1.0, 1.0), 1.2)  # White text
 
 def render_stroke_text(x, y, text, scale, color=(1, 1, 1), line_width=1):
     glPushMatrix()
