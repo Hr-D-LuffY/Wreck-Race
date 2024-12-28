@@ -223,7 +223,7 @@ def my_car():
     MidpointLine(car_position-25, 88, car_position-25, 73)
     MidpointLine(car_position+25, 25, car_position+25, 40) 
     MidpointLine(car_position-25, 25, car_position-25, 40)
-
+    #1st
     car_box = collision(x = car_position, y = player_y_position, width = 30, height = 15)
     return car_box
 
@@ -248,7 +248,7 @@ def missile():
 
 def missile_hitbox(x, y):
     return collision(
-        x=x,y=y,width=5,height=24 
+        x=x,y=y,width=5,height=20 
     )
 
 def missiles_movement(d_time):
@@ -306,10 +306,11 @@ class Heart:
         MidpointLine(x, self.y, x, self.y - 25)
 
     def update(self):
-        self.y -= 7 
-        # if self.y < 300:
-        #     self.alpha -= 0.02  # Gradually fade out
-        if self.y <= 0:
+        self.y -= 8  # Move downward
+        if self.y < 400:
+            self.alpha -= 0.02  # Gradually fade out
+
+        if self.alpha <= 0:
             return False  # Remove heart when fully faded
         return True
 
@@ -433,7 +434,7 @@ class EnemyCar:
 
 def increase_global_speed(elapsed_time, last_increase_time):
     global global_speed_modifier
-    if elapsed_time - last_increase_time >= 10:  # Increase speed every 10 seconds
+    if elapsed_time - last_increase_time >= 15:  # Increase speed every 15 seconds
         global_speed_modifier += 0.5
         return elapsed_time  # Update the last increase time
     return last_increase_time
@@ -443,11 +444,11 @@ def spawn_enemy_cars(elapsed_time, last_adjustment_time):
 
     # Adjust the number of cars to spawn and spawn interval after 30 seconds
     if elapsed_time - last_adjustment_time >= 30:  # Adjust every 30 seconds
-        spawn_interval = 2  # Set spawn interval to 2 seconds
+        spawn_interval = 3  # Set spawn interval to 2 seconds
         MAX_ENEMY_CARS = 5  # Update max number of enemy car
 
     if elapsed_time - last_adjustment_time >= 50:  # Adjust every 60 seconds
-        spawn_interval = 1  # Set spawn interval to 1 seconds
+        spawn_interval = 2  # Set spawn interval to 1 seconds
         last_adjustment_time = elapsed_time  # Update the last adjustment time
 
     current_time = time.time()
@@ -467,7 +468,7 @@ def spawn_enemy_cars(elapsed_time, last_adjustment_time):
                 if available_lanes:  # Ensure there are lanes left to choose from
                     x = random.choice(available_lanes)  # Choose a random available lane
                     available_lanes.remove(x)  # Remove the chosen lane to prevent reuse
-                    y = random.randint(500, 600)  # Start at the top of the screen
+                    y = random.randint(550, 600)  # Start at the top of the screen
                     while True:
                         color = (random.random(), random.random(), random.random())
                         if color != (1, 0, 0) and color != (0, 0, 0):  # Avoid specific colors (e.g., red or black)
@@ -480,6 +481,35 @@ def spawn_enemy_cars(elapsed_time, last_adjustment_time):
 
     return last_adjustment_time
 
+
+# def spawn_enemy_cars():
+#     global enemy_cars, last_spawn_time, spawn_interval
+
+#     current_time = time.time()
+
+#     # Control spawn interval to control how often enemy cars spawn
+#     if (current_time - last_spawn_time) >= spawn_interval:
+#         lanes = [175, 275, 375, 475, 575]  # Centers of the lanes
+#         available_lanes = lanes.copy()
+
+#         # Limit the number of enemy cars in the game
+#         if len(enemy_cars) < MAX_ENEMY_CARS:
+#             # Reduce the number of cars spawned each time
+#             num_cars_to_spawn = random.randint(2,4)  # Spawn between 2 to 4 cars per call
+#             for _ in range(num_cars_to_spawn):
+#                 if available_lanes:  # Ensure there are lanes left to choose from
+#                     x = random.choice(available_lanes)  # Choose a random available lane
+#                     available_lanes.remove(x)  # Remove the chosen lane to prevent reuse
+#                     y = random.randint(550, 600)  # Start at the top of the screen
+#                     while True:
+#                         color = (random.random(), random.random(), random.random())
+#                         if color != (1, 0, 0) and color != (0, 0, 0):  # Avoid specific colors (e.g., red or black)
+#                             break
+#                     is_special = random.random() < 0.15  # Special car chance
+#                     enemy_cars.append(EnemyCar(x, y, color, enemy_car_speed, is_special))  # Add to the list of cars
+
+#         # Update the last spawn time to control the spawn interval
+#         last_spawn_time = current_time
 
 def update_enemy_cars():
     global enemy_cars
@@ -529,9 +559,11 @@ def check_heart_collisions(player_car, hearts):
         
         # Check for collision between the player's car and the heart
         if hasCollided(player_car, heart_hitbox):
+            print("Player collected a heart!")
             life += 1  # Increment the player's life
             hearts.remove(heart)  
 
+# Function to check for collisions with the player's car
 def check_car_collisions(player_car, enemy_cars):
     global life, game_over
     for enemy in enemy_cars:
@@ -539,6 +571,7 @@ def check_car_collisions(player_car, enemy_cars):
         enemy_hitbox = enemy.get_hitbox()
         # Check for collision between the player's car and each enemy car
         if hasCollided(player_car, enemy_hitbox):
+            print("Collision Detected!")
             life -= 1
             if life == 0:
                 game_over = True
@@ -556,6 +589,7 @@ def check_missile_collisions(missiles, enemy_cars):
             enemy_hitbox = enemy.get_hitbox()  # Get enemy car's hitbox
             
             if hasCollided(missile_box, enemy_hitbox):  # Check for collision
+                print("Missile hit an enemy car!")
                 if enemy.is_special:
                     score+=5
                     missile_counter+=1
@@ -680,6 +714,8 @@ def update(value):
         elapsed_time = int(current_time - start_time)
         last_speed_increase_time = increase_global_speed(elapsed_time, last_speed_increase_time)
         last_adjustment_time = spawn_enemy_cars(elapsed_time, last_adjustment_time)
+        # spawn_enemy_cars()
+        # spawn_enemy_cars()
 
 
         # Update missiles and remove those that are no longer visible
@@ -705,7 +741,7 @@ def update(value):
     glutPostRedisplay()
 
     # Continue the timer loop to call the update function every 16 ms
-    glutTimerFunc(16, update, 0)
+    glutTimerFunc(10, update, 0)
 
 def restart():
     global paused,missiles,missile_counter,missile_last_time,last_recharge_time,hearts,heart_spawn_time,no_missile
